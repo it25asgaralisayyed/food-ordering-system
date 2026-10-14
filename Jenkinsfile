@@ -23,13 +23,13 @@ pipeline {
 
         stage('Build with Maven') {
             steps {
-                sh 'mvn clean package -DskipTests'
+                bat 'mvn clean package -DskipTests'
             }
         }
 
         stage('Selenium Tests') {
             steps {
-                sh 'mvn test'
+                bat 'mvn test'
             }
             post {
                 always {
@@ -40,7 +40,7 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                sh 'docker build -t $IMAGE_NAME:$IMAGE_TAG -t $IMAGE_NAME:latest .'
+                bat 'docker build -t %IMAGE_NAME%:%IMAGE_TAG% -t %IMAGE_NAME%:latest .'
             }
         }
 
@@ -49,10 +49,10 @@ pipeline {
                 withCredentials([usernamePassword(credentialsId: 'dockerhub-creds',
                                                   usernameVariable: 'DH_USER',
                                                   passwordVariable: 'DH_PASS')]) {
-                    sh '''
-                        echo "$DH_PASS" | docker login -u "$DH_USER" --password-stdin
-                        docker push $IMAGE_NAME:$IMAGE_TAG
-                        docker push $IMAGE_NAME:latest
+                    bat '''
+                        echo %DH_PASS%| docker login -u %DH_USER% --password-stdin
+                        docker push %IMAGE_NAME%:%IMAGE_TAG%
+                        docker push %IMAGE_NAME%:latest
                         docker logout
                     '''
                 }
@@ -61,12 +61,11 @@ pipeline {
 
         stage('Verify Deployment') {
             steps {
-                sh '''
-                    docker rm -f food-app || true
-                    docker run -d --name food-app -p 9090:8080 $IMAGE_NAME:$IMAGE_TAG
-                    sleep 15
-                    curl -f http://localhost:9090/ > /dev/null
-                    echo "Application is running inside the container"
+                bat '''
+                    docker rm -f food-app >nul 2>&1 || ver >nul
+                    docker run -d --name food-app -p 9090:8080 %IMAGE_NAME%:%IMAGE_TAG%
+                    ping -n 16 127.0.0.1 >nul
+                    curl -f http://localhost:9090/ >nul
                     docker rm -f food-app
                 '''
             }
