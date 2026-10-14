@@ -10,6 +10,9 @@ pipeline {
         DOCKER_USER = 'asgarali12311'
         IMAGE_NAME  = "${DOCKER_USER}/food-ordering-system"
         IMAGE_TAG   = "${BUILD_NUMBER}"
+        DOCKER_BIN  = '"C:\\Users\\Asgar Ali Sayyed\\AppData\\Local\\Programs\\DockerDesktop\\resources\\bin\\docker"'
+        DOCKER      = '"C:\\Users\\Asgar Ali Sayyed\\AppData\\Local\\Programs\\DockerDesktop\\resources\\bin\\docker.exe"'
+        PATH        = "C:\\Users\\Asgar Ali Sayyed\\AppData\\Local\\Programs\\DockerDesktop\\resources\\bin\\docker;${env.PATH}"
     }
 
     stages {
@@ -38,9 +41,17 @@ pipeline {
             }
         }
 
+        stage('Check Docker') {
+            steps {
+                bat 'whoami'
+                bat '%DOCKER% --version'
+                bat '%DOCKER% ps'
+            }
+        }
+
         stage('Build Docker Image') {
             steps {
-                bat 'docker build -t %IMAGE_NAME%:%IMAGE_TAG% -t %IMAGE_NAME%:latest .'
+                bat '%DOCKER% build -t %IMAGE_NAME%:%IMAGE_TAG% -t %IMAGE_NAME%:latest .'
             }
         }
 
@@ -50,10 +61,10 @@ pipeline {
                                                   usernameVariable: 'DH_USER',
                                                   passwordVariable: 'DH_PASS')]) {
                     bat '''
-                        echo %DH_PASS%| docker login -u %DH_USER% --password-stdin
-                        docker push %IMAGE_NAME%:%IMAGE_TAG%
-                        docker push %IMAGE_NAME%:latest
-                        docker logout
+                        echo %DH_PASS%| %DOCKER% login -u %DH_USER% --password-stdin
+                        %DOCKER% push %IMAGE_NAME%:%IMAGE_TAG%
+                        %DOCKER% push %IMAGE_NAME%:latest
+                        %DOCKER% logout
                     '''
                 }
             }
@@ -62,11 +73,11 @@ pipeline {
         stage('Verify Deployment') {
             steps {
                 bat '''
-                    docker rm -f food-app >nul 2>&1 || ver >nul
-                    docker run -d --name food-app -p 9090:8080 %IMAGE_NAME%:%IMAGE_TAG%
+                    %DOCKER% rm -f food-app >nul 2>&1 || ver >nul
+                    %DOCKER% run -d --name food-app -p 9090:8080 %IMAGE_NAME%:%IMAGE_TAG%
                     ping -n 16 127.0.0.1 >nul
                     curl -f http://localhost:9090/ >nul
-                    docker rm -f food-app
+                    %DOCKER% rm -f food-app
                 '''
             }
         }
